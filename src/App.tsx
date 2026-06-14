@@ -30,6 +30,26 @@ import ModuloUniformes from './components/ModuloUniformes';
 import EntradasAlmacen from './components/EntradasAlmacen';
 import AjustesInventario from './components/AjustesInventario';
 
+import { isConfigured } from './supabaseClient';
+import {
+  getResidencias,
+  getProductos,
+  getLimitesPlanta,
+  getPedidos,
+  getEntradas,
+  getAjustes,
+  getEntregaUniformes,
+  getVisibilidadConfig,
+  upsertProducto,
+  upsertProductos,
+  upsertPedido,
+  upsertPedidos,
+  insertEntrada,
+  insertAjuste,
+  insertEntregaUniforme,
+  upsertVisibilidadConfig
+} from './dataService';
+
 import { 
   Building2, 
   Users, 
@@ -50,38 +70,54 @@ import {
 } from 'lucide-react';
 
 export default function App() {
-  // --- STATE CORE LOADED FROM LOCAL STORAGE ---
-  const [residencias, setResidencias] = useState<Residencia[]>(() => 
-    getLocalState('residencias', INITIAL_RESIDENCIAS)
-  );
-  const [productos, setProductos] = useState<Producto[]>(() => 
-    getLocalState('productos', INITIAL_PRODUCTOS)
-  );
-  const [limitesPlanta, setLimitesPlanta] = useState<LimitePlanta[]>(() => 
-    getLocalState('limites_planta', INITIAL_LIMITES_PLANTA)
-  );
-  const [pedidos, setPedidos] = useState<Pedido[]>(() => 
-    getLocalState('pedidos', INITIAL_PEDIDOS)
-  );
-  const [entradas, setEntradas] = useState<EntradaStock[]>(() => 
-    getLocalState('entradas', []) // Start clean, loaded from mock additions later
-  );
-  const [ajustes, setAjustes] = useState<AjusteStock[]>(() => 
-    getLocalState('ajustes', INITIAL_AJUSTES)
-  );
-  const [entregaUniformes, setEntregaUniformes] = useState<UniformeEntrega[]>(() => 
-    getLocalState('entrega_uniformes', INITIAL_UNIFORMES)
-  );
-  const [visibilidadConfig, setVisibilidadConfig] = useState<Record<string, CampoVisibilidadConfig>>(() => 
-    getLocalState('visibilidad_config', INITIAL_VISIBILIDAD_ROLE)
-  );
+  // --- STATE CORE LOADED FROM LOCAL STORAGE OR SUPABASE ---
+  const [residencias, setResidencias] = useState<Residencia[]>(INITIAL_RESIDENCIAS);
+  const [productos, setProductos] = useState<Producto[]>(INITIAL_PRODUCTOS);
+  const [limitesPlanta, setLimitesPlanta] = useState<LimitePlanta[]>(INITIAL_LIMITES_PLANTA);
+  const [pedidos, setPedidos] = useState<Pedido[]>(INITIAL_PEDIDOS);
+  const [entradas, setEntradas] = useState<EntradaStock[]>([]);
+  const [ajustes, setAjustes] = useState<AjusteStock[]>(INITIAL_AJUSTES);
+  const [entregaUniformes, setEntregaUniformes] = useState<UniformeEntrega[]>(INITIAL_UNIFORMES);
+  const [visibilidadConfig, setVisibilidadConfig] = useState<Record<string, CampoVisibilidadConfig>>(INITIAL_VISIBILIDAD_ROLE);
+  const [loading, setLoading] = useState(true);
 
   // --- INTERACTIVE SIMULATION SELECTIONS ---
   const [residenciaSeleccionadaId, setResidenciaSeleccionadaId] = useState<string>('res-1');
   const [rolActual, setRolActual] = useState<Rol>('Administrador');
   const [vistaActiva, setVistaActiva] = useState<'stock' | 'pedidos' | 'entradas' | 'uniformes' | 'ajustes' | 'docs' | 'admin-setup'>('stock');
 
-  // --- SAVE STATES ON UPDATES ---
+  // --- ASYNC DATA LOADING ---
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [res, prod, lim, ped, ent, aj, uni, vis] = await Promise.all([
+          getResidencias(),
+          getProductos(),
+          getLimitesPlanta(),
+          getPedidos(),
+          getEntradas(),
+          getAjustes(),
+          getEntregaUniformes(),
+          getVisibilidadConfig()
+        ]);
+        setResidencias(res);
+        setProductos(prod);
+        setLimitesPlanta(lim);
+        setPedidos(ped);
+        setEntradas(ent);
+        setAjustes(aj);
+        setEntregaUniformes(uni);
+        setVisibilidadConfig(vis);
+      } catch (error) {
+        console.error('Failed to load data from database:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
+
+  // --- SAVE STATES ON UPDATES (FALLBACK SYNC) ---
   useEffect(() => { saveLocalState('residencias', residencias); }, [residencias]);
   useEffect(() => { saveLocalState('productos', productos); }, [productos]);
   useEffect(() => { saveLocalState('limites_planta', limitesPlanta); }, [limitesPlanta]);
@@ -126,17 +162,65 @@ export default function App() {
     }
   };
 
-  // State Handler modifiers
-  const handleAddAjuste = (nuevoAjuste: AjusteStock) => {
+  // State Handler modifiers with database sync
+  const handleAddAjuste = async (nuevoAjuste: AjusteStock) => {
     setAjustes([nuevoAjuste, ...ajustes]);
+    if (isConfigured) {
+      await insertAjuste(nuevoAjuste);
+    }
   };
 
-  const handleAddEntregaUniforme = (nuevaEntrega: UniformeEntrega) => {
+  const handleAddEntregaUniforme = async (nuevaEntrega: UniformeEntrega) => {
     setEntregaUniformes([nuevaEntrega, ...entregaUniformes]);
+    if (isConfigured) {
+      await insertEntregaUniforme(nuevaEntrega);
+    }
   };
 
-  const handleAddEntrada = (nuevaEntrada: EntradaStock) => {
+  const handleAddEntrada = async (nuevaEntrada: EntradaStock) => {
     setEntradas([nuevaEntrada, ...entradas]);
+    if (isConfigured) {
+      await insertEntrada(nuevaEntrada);
+    }
+  };
+
+  const handleUpdateProductos = async (newProductos: Producto[]) => {
+    setProductos(newProductos);
+    if (isConfigured) {
+      const changed = newProductos.filter(newP => {
+        const oldP = productos.find(p => p.id === newP.id);
+        if (!oldP) return true;
+        return JSON.stringify(oldP) !== JSON.stringify(newP);
+      });
+      if (changed.length > 0) {
+        await upsertProductos(changed);
+      }
+    }
+  };
+
+  const handleUpdatePedidos = async (newPedidos: Pedido[]) => {
+    setPedidos(newPedidos);
+    if (isConfigured) {
+      const changed = newPedidos.filter(newP => {
+        const oldP = pedidos.find(p => p.id === newP.id);
+        if (!oldP) return true;
+        return JSON.stringify(oldP) !== JSON.stringify(newP);
+      });
+      if (changed.length > 0) {
+        await upsertPedidos(changed);
+      }
+    }
+  };
+
+  const handleUpdateVisibilidadConfig = async (newConfig: Record<string, CampoVisibilidadConfig>) => {
+    setVisibilidadConfig(newConfig);
+    if (isConfigured) {
+      for (const role of Object.keys(newConfig)) {
+        if (JSON.stringify(newConfig[role]) !== JSON.stringify(visibilidadConfig[role])) {
+          await upsertVisibilidadConfig(role, newConfig[role]);
+        }
+      }
+    }
   };
 
   // Metrics calculators
@@ -414,7 +498,7 @@ export default function App() {
           {vistaActiva === 'stock' && (
             <StockGeneral
               productos={productos}
-              onUpdateProductos={setProductos}
+              onUpdateProductos={handleUpdateProductos}
               onAddAjuste={handleAddAjuste}
               rolActual={rolActual}
               visibilidadConfig={visibilidadConfig}
@@ -431,8 +515,8 @@ export default function App() {
               rolActual={rolActual}
               plantaAsignadaUsuario={usuarioActual.planta}
               residenciaSeleccionadaId={residenciaSeleccionadaId}
-              onUpdatePedidos={setPedidos}
-              onUpdateProductos={setProductos}
+              onUpdatePedidos={handleUpdatePedidos}
+              onUpdateProductos={handleUpdateProductos}
               nombreUsuarioActual={usuarioActual.nombre}
             />
           )}
@@ -444,7 +528,7 @@ export default function App() {
               rolActual={rolActual}
               residenciaSeleccionadaId={residenciaSeleccionadaId}
               onAddEntrada={handleAddEntrada}
-              onUpdateProductos={setProductos}
+              onUpdateProductos={handleUpdateProductos}
               onAddAjuste={handleAddAjuste}
               nombreUsuarioActual={usuarioActual.nombre}
             />
@@ -457,7 +541,7 @@ export default function App() {
               rolActual={rolActual}
               residenciaSeleccionadaId={residenciaSeleccionadaId}
               onAddEntregaUniforme={handleAddEntregaUniforme}
-              onUpdateProductos={setProductos}
+              onUpdateProductos={handleUpdateProductos}
               onAddAjuste={handleAddAjuste}
               nombreUsuarioActual={usuarioActual.nombre}
             />
@@ -515,7 +599,7 @@ export default function App() {
                                     ...roleConfig,
                                     [key]: e.target.checked
                                   };
-                                  setVisibilidadConfig({
+                                  handleUpdateVisibilidadConfig({
                                     ...visibilidadConfig,
                                     [roleToEdit]: updatedRoleConfig
                                   });
@@ -551,7 +635,9 @@ export default function App() {
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
           <p>© 2026 IMAStock - Creat per a la xarxa de residències públiques de Gent Gran.</p>
           <div className="flex gap-4 text-[11px]">
-            <span className="text-emerald-400 font-bold">● Base de dades: Supabase PG</span>
+            <span className={isConfigured ? "text-emerald-400 font-bold" : "text-amber-400 font-bold"}>
+              ● Base de dades: {isConfigured ? 'Supabase PG (Activa)' : 'LocalStorage (Simulado)'}
+            </span>
             <span>Aïllat Multi-Tenant</span>
             <span>Estocs Automatitzats</span>
           </div>
