@@ -1,24 +1,24 @@
 import { useState, useEffect } from 'react';
-import { 
-  INITIAL_RESIDENCIAS, 
-  INITIAL_PRODUCTOS, 
-  INITIAL_LIMITES_PLANTA, 
-  INITIAL_PEDIDOS, 
-  INITIAL_AJUSTES, 
-  INITIAL_UNIFORMES, 
+import {
+  INITIAL_RESIDENCIAS,
+  INITIAL_PRODUCTOS,
+  INITIAL_LIMITES_PLANTA,
+  INITIAL_PEDIDOS,
+  INITIAL_AJUSTES,
+  INITIAL_UNIFORMES,
   INITIAL_VISIBILIDAD_ROLE,
-  getLocalState, 
-  saveLocalState 
+  getLocalState,
+  saveLocalState
 } from './mockData';
-import { 
-  Residencia, 
-  Producto, 
-  LimitePlanta, 
-  Pedido, 
-  EntradaStock, 
-  AjusteStock, 
-  UniformeEntrega, 
-  Rol, 
+import {
+  Residencia,
+  Producto,
+  LimitePlanta,
+  Pedido,
+  EntradaStock,
+  AjusteStock,
+  UniformeEntrega,
+  Rol,
   CampoVisibilidadConfig,
   Perfil
 } from './types';
@@ -51,19 +51,19 @@ import {
   upsertVisibilidadConfig
 } from './dataService';
 
-import { 
-  Building2, 
-  Users, 
-  Package, 
-  ClipboardCheck, 
-  Shirt, 
-  FileText, 
-  History, 
-  Grid, 
-  Settings, 
-  Bell, 
-  Check, 
-  User, 
+import {
+  Building2,
+  Users,
+  Package,
+  ClipboardCheck,
+  Shirt,
+  FileText,
+  History,
+  Grid,
+  Settings,
+  Bell,
+  Check,
+  User,
   Info,
   Layers,
   Sparkles,
@@ -207,13 +207,13 @@ export default function App() {
 
   const getRoleDescription = (rol: Rol) => {
     switch (rol) {
-      case 'Administrador': 
+      case 'Administrador':
         return 'Control total dels centres. Pot autoritzar excesos de pedidos, aprovar productes fets per almaceneros i canviar la visibilitat de camps per rol.';
-      case 'Administrativo': 
+      case 'Administrativo':
         return 'Té capacitat d\'introduir stock (albarans), fer comandes, veure estadístiques i demanar licitacions.';
-      case 'Personal de almacén': 
+      case 'Personal de almacén':
         return 'Registra entrades i sortides ràpides inline. Quan crea un producte, queda "Pendent d\'aprovació" (ocult per a les plantes).';
-      case 'Coordinador de planta': 
+      case 'Coordinador de planta':
         return 'Només veu les seves comandes i el stock simplificat de la seva planta. Fa comandes de planta i confirma recepció.';
     }
   };
@@ -325,7 +325,7 @@ export default function App() {
           </div>
 
           <div className="hidden md:flex items-center text-xs font-semibold text-slate-400 italic max-w-md line-clamp-1 uppercase tracking-wider">
-            Gestor d’Almacén Multi-Centro • Residències
+            Gestor de magatzem d'Atenció Sociosanitària
           </div>
         </div>
 
@@ -375,9 +375,8 @@ export default function App() {
         </div>
       </header>
 
-      {/* RLS Informational Banner in production */}
       <section className="bg-slate-900 text-slate-100 px-6 py-3 border-b border-slate-950 shadow-inner flex items-center justify-between">
-        <div className="max-w-7xl mx-auto w-full flex items-center justify-between text-xs gap-3">
+        <div className="w-full flex items-center justify-between text-xs gap-3">
           <div className="flex items-center gap-2">
             <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-blue-600 text-white uppercase">
               {rolActual}
@@ -386,7 +385,7 @@ export default function App() {
               Sessió activa com a <strong>{usuarioActual.nombre}</strong> ({usuarioActual.email}).
             </span>
           </div>
-          <button 
+          <button
             onClick={handleLogout}
             className="md:hidden flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 font-semibold cursor-pointer"
           >
@@ -396,9 +395,8 @@ export default function App() {
         </div>
       </section>
 
-      {/* Real-time Indicator Stats widgets */}
       <section className="bg-white border-b border-slate-200 px-6 py-4 hidden sm:block">
-        <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="w-full grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-white p-4 border border-slate-200 border-l-4 border-l-red-500 shadow-sm flex items-center justify-between">
             <div>
               <div className="text-[10px] font-bold text-red-500 uppercase tracking-wider mb-0.5">Mínims Crítics (Vermell)</div>
@@ -434,19 +432,18 @@ export default function App() {
       </section>
 
       {/* Main Interactive body area */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 md:px-6 py-6 flex flex-col md:flex-row gap-6">
+      <main className="flex-1 w-full px-4 md:px-8 lg:px-12 py-6 flex flex-col md:flex-row gap-6">
         {/* Left Side Sidebar Navigation */}
         <nav className="w-full md:w-64 shrink-0 space-y-3">
           <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3">Mòduls Operatius</span>
-          
+
           <div className="grid grid-cols-2 md:grid-cols-1 gap-1.5">
             <button
               onClick={() => setVistaActiva('stock')}
-              className={`flex items-center gap-3 px-4 py-2.5 text-xs md:text-sm font-semibold rounded-sm text-left transition-all cursor-pointer border ${
-                vistaActiva === 'stock'
+              className={`flex items-center gap-3 px-4 py-2.5 text-xs md:text-sm font-semibold rounded-sm text-left transition-all cursor-pointer border ${vistaActiva === 'stock'
                   ? 'bg-blue-50 text-blue-700 font-bold border-blue-200'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-transparent'
-              }`}
+                }`}
             >
               <Package className="h-4 w-4" />
               <span>Inventari i Alerta Colors</span>
@@ -454,11 +451,10 @@ export default function App() {
 
             <button
               onClick={() => setVistaActiva('pedidos')}
-              className={`flex items-center justify-between px-4 py-2.5 text-xs md:text-sm font-semibold rounded-sm text-left transition-all cursor-pointer border ${
-                vistaActiva === 'pedidos'
+              className={`flex items-center justify-between px-4 py-2.5 text-xs md:text-sm font-semibold rounded-sm text-left transition-all cursor-pointer border ${vistaActiva === 'pedidos'
                   ? 'bg-blue-50 text-blue-700 font-bold border-blue-200'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-transparent'
-              }`}
+                }`}
             >
               <span className="flex items-center gap-3">
                 <ClipboardCheck className="h-4 w-4" />
@@ -474,13 +470,11 @@ export default function App() {
             <button
               onClick={() => setVistaActiva('entradas')}
               disabled={rolActual === 'Coordinador de planta'}
-              className={`flex items-center gap-3 px-4 py-2.5 text-xs md:text-sm font-semibold rounded-sm text-left transition-all cursor-pointer border ${
-                rolActual === 'Coordinador de planta' ? 'opacity-40 cursor-not-allowed' : ''
-              } ${
-                vistaActiva === 'entradas'
+              className={`flex items-center gap-3 px-4 py-2.5 text-xs md:text-sm font-semibold rounded-sm text-left transition-all cursor-pointer border ${rolActual === 'Coordinador de planta' ? 'opacity-40 cursor-not-allowed' : ''
+                } ${vistaActiva === 'entradas'
                   ? 'bg-blue-50 text-blue-700 font-bold border-blue-200'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-transparent'
-              }`}
+                }`}
             >
               <FileText className="h-4 w-4" />
               <span>Entrades i Albarans</span>
@@ -489,13 +483,11 @@ export default function App() {
             <button
               onClick={() => setVistaActiva('uniformes')}
               disabled={rolActual === 'Coordinador de planta'}
-              className={`flex items-center gap-3 px-4 py-2.5 text-xs md:text-sm font-semibold rounded-sm text-left transition-all cursor-pointer border ${
-                rolActual === 'Coordinador de planta' ? 'opacity-40 cursor-not-allowed' : ''
-              } ${
-                vistaActiva === 'uniformes'
+              className={`flex items-center gap-3 px-4 py-2.5 text-xs md:text-sm font-semibold rounded-sm text-left transition-all cursor-pointer border ${rolActual === 'Coordinador de planta' ? 'opacity-40 cursor-not-allowed' : ''
+                } ${vistaActiva === 'uniformes'
                   ? 'bg-blue-50 text-blue-700 font-bold border-blue-200'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-transparent'
-              }`}
+                }`}
             >
               <Shirt className="h-4 w-4" />
               <span>Lliurament d'Uniformes</span>
@@ -503,11 +495,10 @@ export default function App() {
 
             <button
               onClick={() => setVistaActiva('ajustes')}
-              className={`flex items-center gap-3 px-4 py-2.5 text-xs md:text-sm font-semibold rounded-sm text-left transition-all cursor-pointer border ${
-                vistaActiva === 'ajustes'
+              className={`flex items-center gap-3 px-4 py-2.5 text-xs md:text-sm font-semibold rounded-sm text-left transition-all cursor-pointer border ${vistaActiva === 'ajustes'
                   ? 'bg-blue-50 text-blue-700 font-bold border-blue-200'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-transparent'
-              }`}
+                }`}
             >
               <History className="h-4 w-4" />
               <span>Logs / Auditories Internes</span>
@@ -518,11 +509,10 @@ export default function App() {
 
                 <button
                   onClick={() => setVistaActiva('admin-setup')}
-                  className={`flex items-center gap-3 w-full px-4 py-2.5 text-xs md:text-sm font-semibold rounded-sm text-left transition-all cursor-pointer border ${
-                    vistaActiva === 'admin-setup'
+                  className={`flex items-center gap-3 w-full px-4 py-2.5 text-xs md:text-sm font-semibold rounded-sm text-left transition-all cursor-pointer border ${vistaActiva === 'admin-setup'
                       ? 'bg-purple-50 text-purple-700 font-bold border-purple-200'
                       : 'text-purple-600 hover:text-purple-900 hover:bg-purple-50 border-transparent'
-                  }`}
+                    }`}
                 >
                   <Settings className="h-4 w-4 text-purple-600" />
                   <span>Configurar Rol Camps</span>
@@ -530,11 +520,10 @@ export default function App() {
 
                 <button
                   onClick={() => setVistaActiva('usuarios')}
-                  className={`flex items-center gap-3 w-full px-4 py-2.5 text-xs md:text-sm font-semibold rounded-sm text-left transition-all cursor-pointer border ${
-                    vistaActiva === 'usuarios'
+                  className={`flex items-center gap-3 w-full px-4 py-2.5 text-xs md:text-sm font-semibold rounded-sm text-left transition-all cursor-pointer border ${vistaActiva === 'usuarios'
                       ? 'bg-blue-50 text-blue-750 font-bold border-blue-200'
                       : 'text-blue-600 hover:text-blue-900 hover:bg-blue-50 border-transparent'
-                  }`}
+                    }`}
                 >
                   <Users className="h-4 w-4 text-blue-600" />
                   <span>Gestió d'Usuaris</span>
@@ -696,9 +685,8 @@ export default function App() {
         </div>
       </main>
 
-      {/* Footer bar */}
       <footer className="bg-slate-900 text-slate-400 py-6 px-6 text-center border-t border-slate-950 text-xs shrink-0">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div className="w-full flex flex-col sm:flex-row justify-between items-center gap-4">
           <p>© 2026 IMAStock - Creat per a la xarxa de residències públiques de Gent Gran.</p>
           <div className="flex gap-4 text-[11px]">
             <span className={isConfigured ? "text-emerald-400 font-bold" : "text-amber-400 font-bold"}>

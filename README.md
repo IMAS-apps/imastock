@@ -1,4 +1,4 @@
-# IMAStock — Gestor d'Almacén Multi-Centro
+# IMAStock — Gestor de magatzem d'Atenció Sociosanitària
 
 IMAStock es un sistema avanzado de gestión de inventarios y almacenes diseñado específicamente para la red de residencias públicas de personas mayores. La aplicación permite un control centralizado e independiente para cada centro (aislamiento Multi-Tenant) y un sistema robusto de permisos y visibilidad de datos basado en los roles de los usuarios.
 
