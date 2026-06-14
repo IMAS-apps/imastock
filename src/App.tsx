@@ -29,6 +29,7 @@ import EntradasAlmacen from './components/EntradasAlmacen';
 import AjustesInventario from './components/AjustesInventario';
 import Login from './components/Login';
 import GestionUsuarios from './components/GestionUsuarios';
+import GestionCentros from './components/GestionCentros';
 
 import { supabase, isConfigured } from './supabaseClient';
 import {
@@ -88,19 +89,19 @@ export default function App() {
   const [perfilUsuario, setPerfilUsuario] = useState<Perfil | null>(null);
 
   // --- INTERACTIVE SIMULATION SELECTIONS ---
-  const [residenciaSeleccionadaId, setResidenciaSeleccionadaId] = useState<string>('res-1');
-  const [vistaActiva, setVistaActiva] = useState<'stock' | 'pedidos' | 'entradas' | 'uniformes' | 'ajustes' | 'admin-setup' | 'usuarios'>('stock');
+  const [residenciaSeleccionadaId, setResidenciaSeleccionadaId] = useState<string>('');
+  const [vistaActiva, setVistaActiva] = useState<'stock' | 'pedidos' | 'entradas' | 'uniformes' | 'ajustes' | 'admin-setup' | 'usuarios' | 'centros'>('stock');
 
   // --- ASYNC DATA LOADING & AUTH LISTENERS ---
   useEffect(() => {
     if (!isConfigured) {
-      // Auto-assign mock profile for demo when Supabase is not configured
+      // Auto-assign empty profile when Supabase is not configured
       setPerfilUsuario({
         id: 'mock-user-id',
         email: 'admin@imastock.org',
-        nombre: 'Tomàs Català (Demo)',
+        nombre: 'Administrador (Sense Supabase)',
         rol: 'Administrador',
-        residenciaIds: ['res-1', 'res-2', 'res-3'],
+        residenciaIds: [],
         plantaAsignada: ''
       });
       setSession({ user: { id: 'mock-user-id' } });
@@ -186,7 +187,10 @@ export default function App() {
     ? residencias.filter(r => perfilUsuario.residenciaIds.includes(r.id))
     : residencias;
 
-  const residenciaSeleccionada = residenciasPermitidas.find(r => r.id === residenciaSeleccionadaId) || residenciasPermitidas[0] || residencias[0];
+  const residenciaSeleccionada = residenciasPermitidas.find(r => r.id === residenciaSeleccionadaId) 
+    || residenciasPermitidas[0] 
+    || residencias[0]
+    || { id: '', nombre: 'Cap centre actiu', direccion: 'Sense direcció', codigoPostal: '', ciudad: '', secciones: [] };
 
   // Auto-switch selected residence if not allowed
   useEffect(() => {
@@ -208,13 +212,13 @@ export default function App() {
   const getRoleDescription = (rol: Rol) => {
     switch (rol) {
       case 'Administrador':
-        return 'Control total dels centres. Pot autoritzar excesos de pedidos, aprovar productes fets per almaceneros i canviar la visibilitat de camps per rol.';
+        return 'Control total dels centres. Pot autoritzar excessos de comandes, aprovar productes creats per magatzemers i canviar la visibilitat de camps per rol.';
       case 'Administrativo':
-        return 'Té capacitat d\'introduir stock (albarans), fer comandes, veure estadístiques i demanar licitacions.';
+        return 'Té capacitat d\'introduir estoc (albarans), fer comandes, veure estadístiques i demanar licitacions.';
       case 'Personal de almacén':
         return 'Registra entrades i sortides ràpides inline. Quan crea un producte, queda "Pendent d\'aprovació" (ocult per a les plantes).';
       case 'Coordinador de planta':
-        return 'Només veu les seves comandes i el stock simplificat de la seva planta. Fa comandes de planta i confirma recepció.';
+        return 'Només veu les seves comandes i l\'estoc simplificat de la seva planta. Fa comandes de planta i confirma recepció.';
     }
   };
 
@@ -338,10 +342,15 @@ export default function App() {
                 <span className={`w-2 h-2 rounded-full ${isConfigured ? 'bg-emerald-500' : 'bg-amber-500'}`} title={isConfigured ? 'Supabase Activa' : 'LocalStorage'}></span>
                 {usuarioActual.nombre}
               </div>
+              <div className="mt-1 text-[9px] font-bold uppercase tracking-wider flex justify-end">
+                <span className={`px-1.5 py-0.5 rounded-sm ${getRoleBadgeColor(rolActual)}`}>
+                  {rolActual}
+                </span>
+              </div>
             </div>
             <button
               onClick={handleLogout}
-              className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-slate-50 rounded-sm cursor-pointer transition-all border border-slate-200"
+              className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-slate-50 rounded-sm cursor-pointer transition-all border border-slate-200 font-semibold"
               title="Tancar sessió"
             >
               <LogOut className="h-4 w-4" />
@@ -374,26 +383,6 @@ export default function App() {
           </div>
         </div>
       </header>
-
-      <section className="bg-slate-900 text-slate-100 px-6 py-3 border-b border-slate-950 shadow-inner flex items-center justify-between">
-        <div className="w-full flex items-center justify-between text-xs gap-3">
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-blue-600 text-white uppercase">
-              {rolActual}
-            </span>
-            <span className="text-slate-300">
-              Sessió activa com a <strong>{usuarioActual.nombre}</strong> ({usuarioActual.email}).
-            </span>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="md:hidden flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 font-semibold cursor-pointer"
-          >
-            <LogOut className="h-3.5 w-3.5" />
-            Sortir
-          </button>
-        </div>
-      </section>
 
       <section className="bg-white border-b border-slate-200 px-6 py-4 hidden sm:block">
         <div className="w-full grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -441,24 +430,24 @@ export default function App() {
             <button
               onClick={() => setVistaActiva('stock')}
               className={`flex items-center gap-3 px-4 py-2.5 text-xs md:text-sm font-semibold rounded-sm text-left transition-all cursor-pointer border ${vistaActiva === 'stock'
-                  ? 'bg-blue-50 text-blue-700 font-bold border-blue-200'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-transparent'
+                ? 'bg-blue-50 text-blue-700 font-bold border-blue-200'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-transparent'
                 }`}
             >
               <Package className="h-4 w-4" />
-              <span>Inventari i Alerta Colors</span>
+              <span>Control d'inventari</span>
             </button>
 
             <button
               onClick={() => setVistaActiva('pedidos')}
               className={`flex items-center justify-between px-4 py-2.5 text-xs md:text-sm font-semibold rounded-sm text-left transition-all cursor-pointer border ${vistaActiva === 'pedidos'
-                  ? 'bg-blue-50 text-blue-700 font-bold border-blue-200'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-transparent'
+                ? 'bg-blue-50 text-blue-700 font-bold border-blue-200'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-transparent'
                 }`}
             >
               <span className="flex items-center gap-3">
                 <ClipboardCheck className="h-4 w-4" />
-                <span>Comandes de Planta</span>
+                <span>Comandes</span>
               </span>
               {totalPedidosAbiertos > 0 && (
                 <span className="bg-red-500 text-white text-[10px] font-bold h-5 min-w-5 shrink-0 px-1.5 rounded-sm flex items-center justify-center">
@@ -477,7 +466,7 @@ export default function App() {
                 }`}
             >
               <FileText className="h-4 w-4" />
-              <span>Entrades i Albarans</span>
+              <span>Entrades</span>
             </button>
 
             <button
@@ -490,18 +479,18 @@ export default function App() {
                 }`}
             >
               <Shirt className="h-4 w-4" />
-              <span>Lliurament d'Uniformes</span>
+              <span>Gestió d'uniformes</span>
             </button>
 
             <button
               onClick={() => setVistaActiva('ajustes')}
               className={`flex items-center gap-3 px-4 py-2.5 text-xs md:text-sm font-semibold rounded-sm text-left transition-all cursor-pointer border ${vistaActiva === 'ajustes'
-                  ? 'bg-blue-50 text-blue-700 font-bold border-blue-200'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-transparent'
+                ? 'bg-blue-50 text-blue-700 font-bold border-blue-200'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-transparent'
                 }`}
             >
               <History className="h-4 w-4" />
-              <span>Logs / Auditories Internes</span>
+              <span>Registre de canvis</span>
             </button>
             {rolActual === 'Administrador' && (
               <div className="pt-4 border-t border-slate-200 space-y-1">
@@ -510,23 +499,34 @@ export default function App() {
                 <button
                   onClick={() => setVistaActiva('admin-setup')}
                   className={`flex items-center gap-3 w-full px-4 py-2.5 text-xs md:text-sm font-semibold rounded-sm text-left transition-all cursor-pointer border ${vistaActiva === 'admin-setup'
-                      ? 'bg-purple-50 text-purple-700 font-bold border-purple-200'
-                      : 'text-purple-600 hover:text-purple-900 hover:bg-purple-50 border-transparent'
+                    ? 'bg-purple-50 text-purple-700 font-bold border-purple-200'
+                    : 'text-purple-600 hover:text-purple-900 hover:bg-purple-50 border-transparent'
                     }`}
                 >
                   <Settings className="h-4 w-4 text-purple-600" />
-                  <span>Configurar Rol Camps</span>
+                  <span>Configuració de rols</span>
                 </button>
 
                 <button
                   onClick={() => setVistaActiva('usuarios')}
                   className={`flex items-center gap-3 w-full px-4 py-2.5 text-xs md:text-sm font-semibold rounded-sm text-left transition-all cursor-pointer border ${vistaActiva === 'usuarios'
-                      ? 'bg-blue-50 text-blue-750 font-bold border-blue-200'
-                      : 'text-blue-600 hover:text-blue-900 hover:bg-blue-50 border-transparent'
+                    ? 'bg-blue-50 text-blue-700 font-bold border-blue-200'
+                    : 'text-blue-600 hover:text-blue-900 hover:bg-blue-50 border-transparent'
                     }`}
                 >
                   <Users className="h-4 w-4 text-blue-600" />
-                  <span>Gestió d'Usuaris</span>
+                  <span>Gestió d'usuaris</span>
+                </button>
+
+                <button
+                  onClick={() => setVistaActiva('centros')}
+                  className={`flex items-center gap-3 w-full px-4 py-2.5 text-xs md:text-sm font-semibold rounded-sm text-left transition-all cursor-pointer border ${vistaActiva === 'centros'
+                    ? 'bg-purple-50 text-purple-700 font-bold border-purple-200'
+                    : 'text-purple-600 hover:text-purple-900 hover:bg-purple-50 border-transparent'
+                    }`}
+                >
+                  <Building2 className="h-4 w-4 text-purple-600" />
+                  <span>Gestió de centres</span>
                 </button>
               </div>
             )}
@@ -534,7 +534,7 @@ export default function App() {
 
           {/* Current selected residence data summary visual card */}
           <div className="bg-white p-4 rounded-sm border border-slate-200 text-slate-800 space-y-2.5 shadow-xs hidden md:block">
-            <div className="text-[10px] text-blue-600 font-bold uppercase tracking-wider">Inquilí Actiu</div>
+            <div className="text-[10px] text-blue-600 font-bold uppercase tracking-wider">Centre actiu</div>
             <div className="font-bold text-xs text-slate-900">{residenciaSeleccionada.nombre}</div>
             <div className="text-[11px] text-slate-500 leading-tight">
               📍 {residenciaSeleccionada.direccion}, {residenciaSeleccionada.codigoPostal} - {residenciaSeleccionada.ciudad}
@@ -568,6 +568,7 @@ export default function App() {
               rolActual={rolActual}
               plantaAsignadaUsuario={usuarioActual.plantaAsignada}
               residenciaSeleccionadaId={residenciaSeleccionadaId}
+              residencias={residencias}
               onUpdatePedidos={handleUpdatePedidos}
               onUpdateProductos={handleUpdateProductos}
               nombreUsuarioActual={usuarioActual.nombre}
@@ -607,10 +608,12 @@ export default function App() {
             />
           )}
 
-
-
           {vistaActiva === 'usuarios' && rolActual === 'Administrador' && (
             <GestionUsuarios residencias={residencias} />
+          )}
+
+          {vistaActiva === 'centros' && rolActual === 'Administrador' && (
+            <GestionCentros residencias={residencias} onUpdateResidencias={setResidencias} />
           )}
 
           {vistaActiva === 'admin-setup' && rolActual === 'Administrador' && (

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Pedido, Producto, LimitePlanta, Rol, PedidoEstado } from '../types';
+import React, { useState, useEffect } from 'react';
+import { Pedido, Producto, LimitePlanta, Rol, PedidoEstado, Residencia } from '../types';
 import { ClipboardList, PlusCircle, AlertOctagon, CheckSquare, Truck, Archive, Play, AlertCircle, Sparkles, Check, UserCheck, Edit2 } from 'lucide-react';
 
 interface PedidosPlantaProps {
@@ -9,6 +9,7 @@ interface PedidosPlantaProps {
   rolActual: Rol;
   plantaAsignadaUsuario?: string;
   residenciaSeleccionadaId: string;
+  residencias: Residencia[];
   onUpdatePedidos: (newPedidos: Pedido[]) => void;
   onUpdateProductos: (newProductos: Producto[]) => void;
   nombreUsuarioActual: string;
@@ -21,6 +22,7 @@ export default function PedidosPlanta({
   rolActual,
   plantaAsignadaUsuario,
   residenciaSeleccionadaId,
+  residencias,
   onUpdatePedidos,
   onUpdateProductos,
   nombreUsuarioActual,
@@ -32,6 +34,15 @@ export default function PedidosPlanta({
     unidadesSolicitadas: 5,
     observaciones: '',
   });
+
+  const activeRes = residencias.find(r => r.id === residenciaSeleccionadaId);
+  const activeSections = activeRes?.secciones || ['Planta 1', 'Planta 2', 'Menjador'];
+
+  useEffect(() => {
+    if (!plantaAsignadaUsuario && activeSections.length > 0) {
+      setNewOrder(prev => ({ ...prev, planta: activeSections[0] }));
+    }
+  }, [residenciaSeleccionadaId, activeSections, plantaAsignadaUsuario]);
 
   // Filter orders by selected residencia
   const filteredPedidos = pedidos.filter((p) => p.residenciaId === residenciaSeleccionadaId);
@@ -512,10 +523,11 @@ export default function PedidosPlanta({
                       onChange={(e) => setNewOrder({ ...newOrder, planta: e.target.value })}
                       className="w-full text-xs mt-1 border border-gray-200 rounded-lg p-2.5 outline-none bg-white font-medium"
                     >
-                      <option value="Planta 1">Planta 1 (Infermeria)</option>
-                      <option value="Planta 2">Planta 2 (Crònics)</option>
-                      <option value="Comedor Central">Menjador Residencia</option>
-                      <option value="Cafetería d'Avis">Cafeteria</option>
+                      {activeSections.map((sec) => (
+                        <option key={sec} value={sec}>
+                          {sec}
+                        </option>
+                      ))}
                     </select>
                   )}
                 </div>

@@ -186,7 +186,7 @@ export default function GestionUsuarios({ residencias }: Props) {
                       ) : (
                         <div className="flex flex-wrap gap-1">
                           {profile.residenciaIds.length === 0 ? (
-                            <span className="text-slate-400 italic">Ninguna asignada</span>
+                            <span className="text-slate-400 italic">Cap assignada</span>
                           ) : (
                             profile.residenciaIds.map((resId) => {
                               const resName = residencias.find(r => r.id === resId)?.nombre || resId;
@@ -207,7 +207,7 @@ export default function GestionUsuarios({ residencias }: Props) {
                             type="text"
                             value={editPlantaAsignada}
                             onChange={(e) => setEditPlantaAsignada(e.target.value)}
-                            placeholder="Ej. Planta 1"
+                            placeholder="Ex. Planta 1"
                             className="px-2 py-1 text-xs bg-white border border-slate-300 rounded-sm text-slate-800 outline-none focus:ring-1 focus:ring-blue-500 w-28"
                           />
                         ) : (
@@ -216,7 +216,7 @@ export default function GestionUsuarios({ residencias }: Props) {
                       ) : (
                         <span className="text-slate-600 font-semibold">
                           {profile.rol === 'Coordinador de planta' 
-                            ? profile.plantaAsignada || 'No asignada' 
+                            ? profile.plantaAsignada || 'No assignada' 
                             : '-'}
                         </span>
                       )}

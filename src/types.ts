@@ -6,6 +6,7 @@ export interface Residencia {
   direccion: string;
   codigoPostal: string;
   ciudad: string;
+  secciones?: string[];
 }
 
 export interface Perfil {

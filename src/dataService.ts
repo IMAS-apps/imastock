@@ -262,7 +262,8 @@ export async function getResidencias(): Promise<Residencia[]> {
     nombre: r.nombre,
     direccion: r.direccion,
     codigoPostal: r.codigo_postal,
-    ciudad: r.ciudad
+    ciudad: r.ciudad,
+    secciones: r.secciones || []
   }));
 }
 
@@ -418,5 +419,25 @@ export async function getPerfilById(id: string): Promise<Perfil | null> {
     residenciaIds: data.residencia_ids || [],
     plantaAsignada: data.planta_asignada || ''
   };
+}
+
+export async function upsertResidencia(r: Residencia): Promise<void> {
+  if (!isConfigured) return;
+  const dbData = {
+    id: r.id,
+    nombre: r.nombre,
+    direccion: r.direccion,
+    codigo_postal: r.codigoPostal,
+    ciudad: r.ciudad,
+    secciones: r.secciones || []
+  };
+  const { error } = await supabase.from('residencias').upsert(dbData);
+  if (error) console.error('Error upserting residencia:', error);
+}
+
+export async function deleteResidencia(id: string): Promise<void> {
+  if (!isConfigured) return;
+  const { error } = await supabase.from('residencias').delete().eq('id', id);
+  if (error) console.error('Error deleting residencia:', error);
 }
 

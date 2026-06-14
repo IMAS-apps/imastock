@@ -657,7 +657,7 @@ export default function StockGeneral({
               <h3 className="text-base font-bold uppercase tracking-wider">Introducció de Nou Producte a l'Inventari</h3>
               <p className="text-blue-105 text-xs mt-0.5">
                 {rolActual === 'Personal de almacén' 
-                  ? 'Com a Personal d\'Almagatzem, el producte es registrarà com "Pendent d\'aprovació" pel director.' 
+                  ? 'Com a Personal de magatzem, el producte es registrarà com "Pendent d\'aprovació" pel director.' 
                   : 'Registrar un nou producte directament aprovat i actiu pel catàleg.'}
               </p>
             </div>

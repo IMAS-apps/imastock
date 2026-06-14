@@ -47,7 +47,7 @@ export default function Login() {
         if (signInError) throw signInError;
       }
     } catch (err: any) {
-      setError(err.message || 'Ha ocurrido un error inesperado.');
+      setError(err.message || 'Ha hagut un error inesperat.');
     } finally {
       setLoading(false);
     }
@@ -63,7 +63,7 @@ export default function Login() {
           </div>
           <h2 className="text-2xl font-bold tracking-tight">IMA<span className="text-blue-200">Stock</span></h2>
           <p className="text-xs text-blue-100 mt-1 uppercase tracking-widest font-semibold">
-            Acceso al Panel de Control
+            Accés al Panell de Control
           </p>
         </div>
 
@@ -71,12 +71,12 @@ export default function Login() {
         <div className="p-6 sm:p-8 space-y-6">
           <div className="text-center">
             <h3 className="text-lg font-bold text-slate-800">
-              {isSignUp ? 'Crear una Cuenta Nueva' : 'Iniciar Sesión'}
+              {isSignUp ? 'Crear un Compte Nou' : 'Iniciar Sessió'}
             </h3>
             <p className="text-xs text-slate-500 mt-1">
               {isSignUp 
-                ? 'Introduce tus datos para registrarte en el sistema.' 
-                : 'Accede a la red de inventario de residencias.'}
+                ? 'Introdueix les teves dades per registrar-te al sistema.' 
+                : 'Accedeix a la xarxa d\'inventari de residències.'}
             </p>
           </div>
 
@@ -96,7 +96,7 @@ export default function Login() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {isSignUp && (
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-600 block">Nombre Completo</label>
+                <label className="text-xs font-bold text-slate-600 block">Nom Complet</label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 pointer-events-none">
                     <User className="h-4 w-4" />
@@ -106,7 +106,7 @@ export default function Login() {
                     required
                     value={nombre}
                     onChange={(e) => setNombre(e.target.value)}
-                    placeholder="Ej. Juan Pérez"
+                    placeholder="Ex. Joan Pérez"
                     className="pl-9 pr-3 py-2 text-sm w-full bg-slate-50 border border-slate-300 rounded-sm text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500/25 outline-none transition-all"
                   />
                 </div>
@@ -114,7 +114,7 @@ export default function Login() {
             )}
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-600 block">Correo Electrónico</label>
+              <label className="text-xs font-bold text-slate-600 block">Correu Electrònic</label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 pointer-events-none">
                   <Mail className="h-4 w-4" />
@@ -124,14 +124,14 @@ export default function Login() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="ejemplo@imastock.org"
+                  placeholder="exemple@imastock.org"
                   className="pl-9 pr-3 py-2 text-sm w-full bg-slate-50 border border-slate-300 rounded-sm text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500/25 outline-none transition-all"
                 />
               </div>
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-600 block">Contraseña</label>
+              <label className="text-xs font-bold text-slate-600 block">Contrasenya</label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 pointer-events-none">
                   <KeyRound className="h-4 w-4" />
@@ -155,10 +155,10 @@ export default function Login() {
               {loading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Procesando...</span>
+                  <span>Processant...</span>
                 </>
               ) : (
-                <span>{isSignUp ? 'Registrarse' : 'Iniciar Sesión'}</span>
+                <span>{isSignUp ? 'Registrar-se' : 'Iniciar Sessió'}</span>
               )}
             </button>
           </form>
@@ -172,7 +172,7 @@ export default function Login() {
               }}
               className="text-blue-600 hover:underline font-semibold"
             >
-              {isSignUp ? '¿Ya tienes una cuenta? Inicia sesión' : '¿No tienes una cuenta? Regístrate'}
+              {isSignUp ? 'Ja tens un compte? Inicia sessió' : 'No tens un compte? Registra\'t'}
             </button>
           </div>
         </div>
