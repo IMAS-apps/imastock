@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { 
   INITIAL_RESIDENCIAS, 
-  INITIAL_PERFILES, 
   INITIAL_PRODUCTOS, 
   INITIAL_LIMITES_PLANTA, 
   INITIAL_PEDIDOS, 
@@ -13,7 +12,6 @@ import {
 } from './mockData';
 import { 
   Residencia, 
-  Perfil, 
   Producto, 
   LimitePlanta, 
   Pedido, 
@@ -21,16 +19,18 @@ import {
   AjusteStock, 
   UniformeEntrega, 
   Rol, 
-  CampoVisibilidadConfig 
+  CampoVisibilidadConfig,
+  Perfil
 } from './types';
-import TechnicalDoc from './components/TechnicalDoc';
 import StockGeneral from './components/StockGeneral';
 import PedidosPlanta from './components/PedidosPlanta';
 import ModuloUniformes from './components/ModuloUniformes';
 import EntradasAlmacen from './components/EntradasAlmacen';
 import AjustesInventario from './components/AjustesInventario';
+import Login from './components/Login';
+import GestionUsuarios from './components/GestionUsuarios';
 
-import { isConfigured } from './supabaseClient';
+import { supabase, isConfigured } from './supabaseClient';
 import {
   getResidencias,
   getProductos,
@@ -40,6 +40,7 @@ import {
   getAjustes,
   getEntregaUniformes,
   getVisibilidadConfig,
+  getPerfilById,
   upsertProducto,
   upsertProductos,
   upsertPedido,
@@ -66,7 +67,8 @@ import {
   Info,
   Layers,
   Sparkles,
-  ToggleLeft
+  ToggleLeft,
+  LogOut
 } from 'lucide-react';
 
 export default function App() {
@@ -81,13 +83,63 @@ export default function App() {
   const [visibilidadConfig, setVisibilidadConfig] = useState<Record<string, CampoVisibilidadConfig>>(INITIAL_VISIBILIDAD_ROLE);
   const [loading, setLoading] = useState(true);
 
+  // --- SUPABASE AUTH STATE ---
+  const [session, setSession] = useState<any>(null);
+  const [perfilUsuario, setPerfilUsuario] = useState<Perfil | null>(null);
+
   // --- INTERACTIVE SIMULATION SELECTIONS ---
   const [residenciaSeleccionadaId, setResidenciaSeleccionadaId] = useState<string>('res-1');
-  const [rolActual, setRolActual] = useState<Rol>('Administrador');
-  const [vistaActiva, setVistaActiva] = useState<'stock' | 'pedidos' | 'entradas' | 'uniformes' | 'ajustes' | 'docs' | 'admin-setup'>('stock');
+  const [vistaActiva, setVistaActiva] = useState<'stock' | 'pedidos' | 'entradas' | 'uniformes' | 'ajustes' | 'admin-setup' | 'usuarios'>('stock');
 
-  // --- ASYNC DATA LOADING ---
+  // --- ASYNC DATA LOADING & AUTH LISTENERS ---
   useEffect(() => {
+    if (!isConfigured) {
+      // Auto-assign mock profile for demo when Supabase is not configured
+      setPerfilUsuario({
+        id: 'mock-user-id',
+        email: 'admin@imastock.org',
+        nombre: 'Tomàs Català (Demo)',
+        rol: 'Administrador',
+        residenciaIds: ['res-1', 'res-2', 'res-3'],
+        plantaAsignada: ''
+      });
+      setSession({ user: { id: 'mock-user-id' } });
+      setLoading(false);
+      return;
+    }
+
+    supabase.auth.getSession().then(({ data: { session: activeSession } }) => {
+      setSession(activeSession);
+      if (activeSession?.user) {
+        loadUserProfile(activeSession.user.id);
+      } else {
+        setLoading(false);
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+      if (newSession?.user) {
+        loadUserProfile(newSession.user.id);
+      } else {
+        setPerfilUsuario(null);
+        setLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  async function loadUserProfile(userId: string) {
+    setLoading(true);
+    const profile = await getPerfilById(userId);
+    setPerfilUsuario(profile);
+    setLoading(false);
+  }
+
+  // Load other tables data when user profile is loaded
+  useEffect(() => {
+    if (!perfilUsuario) return;
     async function loadData() {
       try {
         const [res, prod, lim, ped, ent, aj, uni, vis] = await Promise.all([
@@ -110,12 +162,10 @@ export default function App() {
         setVisibilidadConfig(vis);
       } catch (error) {
         console.error('Failed to load data from database:', error);
-      } finally {
-        setLoading(false);
       }
     }
     loadData();
-  }, []);
+  }, [perfilUsuario]);
 
   // --- SAVE STATES ON UPDATES (FALLBACK SYNC) ---
   useEffect(() => { saveLocalState('residencias', residencias); }, [residencias]);
@@ -127,17 +177,23 @@ export default function App() {
   useEffect(() => { saveLocalState('entrega_uniformes', entregaUniformes); }, [entregaUniformes]);
   useEffect(() => { saveLocalState('visibilidad_config', visibilidadConfig); }, [visibilidadConfig]);
 
-  // Current Residence and User Object Lookup
-  const residenciaSeleccionada = residencias.find(r => r.id === residenciaSeleccionadaId) || residencias[0];
-  
-  // Simulated Logged-In User Profile according to role
-  const mockUserMap: Record<Rol, { email: string; nombre: string; planta?: string }> = {
-    'Administrador': { email: 'admin@imastock.org', nombre: 'Tomàs Català' },
-    'Administrativo': { email: 'adminis@imastock.org', nombre: 'Marta Soler' },
-    'Personal de almacén': { email: 'almacen@imastock.org', nombre: 'Joan Pujol' },
-    'Coordinador de planta': { email: 'planta1@imastock.org', nombre: 'Clara Sànchez', planta: 'Planta 1' }
-  };
-  const usuarioActual = mockUserMap[rolActual];
+  // Current user role and profile properties
+  const rolActual: Rol = perfilUsuario?.rol || 'Coordinador de planta';
+  const usuarioActual = perfilUsuario || { email: '', nombre: '', plantaAsignada: '' };
+
+  // Filter residencias permitted for this user
+  const residenciasPermitidas = perfilUsuario && perfilUsuario.rol !== 'Administrador'
+    ? residencias.filter(r => perfilUsuario.residenciaIds.includes(r.id))
+    : residencias;
+
+  const residenciaSeleccionada = residenciasPermitidas.find(r => r.id === residenciaSeleccionadaId) || residenciasPermitidas[0] || residencias[0];
+
+  // Auto-switch selected residence if not allowed
+  useEffect(() => {
+    if (residenciasPermitidas.length > 0 && !residenciasPermitidas.some(r => r.id === residenciaSeleccionadaId)) {
+      setResidenciaSeleccionadaId(residenciasPermitidas[0].id);
+    }
+  }, [residenciasPermitidas, residenciaSeleccionadaId]);
 
   // Role info details to guide the reviewer
   const getRoleBadgeColor = (rol: Rol) => {
@@ -230,6 +286,31 @@ export default function App() {
   const totalAprobacionesPendientes = itemsInResidencia.filter(p => !p.aprobado).length;
   const totalPedidosAbiertos = pedidos.filter(p => p.residenciaId === residenciaSeleccionadaId && p.estado !== 'Recibida / Cerrada').length;
 
+  const handleLogout = async () => {
+    if (isConfigured) {
+      await supabase.auth.signOut();
+    } else {
+      setSession(null);
+      setPerfilUsuario(null);
+    }
+  };
+
+  // --- RENDER LOADING STATE ---
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#F3F4F6] flex flex-col items-center justify-center">
+        <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-sm font-semibold text-slate-500 mt-4">Carregant aplicació...</p>
+      </div>
+    );
+  }
+
+  // --- RENDER LOGIN IF NOT AUTHENTICATED ---
+  if (!session || !perfilUsuario) {
+    return <Login />;
+  }
+
+
   return (
     <div className="min-h-screen bg-[#F3F4F6] text-slate-800 font-sans selection:bg-blue-100 antialiased flex flex-col">
       {/* Top Bar Logo and Residence Conmutator */}
@@ -249,6 +330,24 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-4 shrink-0">
+          {/* User Profile Info & Logout */}
+          <div className="text-right hidden md:flex items-center gap-3 border-r border-slate-200 pr-4">
+            <div>
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Usuari</div>
+              <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5 justify-end">
+                <span className={`w-2 h-2 rounded-full ${isConfigured ? 'bg-emerald-500' : 'bg-amber-500'}`} title={isConfigured ? 'Supabase Activa' : 'LocalStorage'}></span>
+                {usuarioActual.nombre}
+              </div>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-slate-50 rounded-sm cursor-pointer transition-all border border-slate-200"
+              title="Tancar sessió"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
+
           <div className="text-right hidden sm:block">
             <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Residència Actual</div>
             <div className="text-xs font-bold text-slate-800">{residenciaSeleccionada.nombre}</div>
@@ -259,12 +358,11 @@ export default function App() {
               value={residenciaSeleccionadaId}
               onChange={(e) => {
                 setResidenciaSeleccionadaId(e.target.value);
-                // Return to general catalog to avoid view discrepancy on tenant shift
                 setVistaActiva('stock');
               }}
               className="pl-3 pr-8 py-1.5 w-full text-xs bg-white border border-slate-300 rounded-sm text-slate-800 font-bold outline-none focus:ring-2 focus:ring-blue-500/25 cursor-pointer transition-all appearance-none"
             >
-              {residencias.map((res) => (
+              {residenciasPermitidas.map((res) => (
                 <option key={res.id} value={res.id} className="text-slate-900 font-medium">
                   🏢 {res.nombre}
                 </option>
@@ -277,57 +375,24 @@ export default function App() {
         </div>
       </header>
 
-      {/* Simulator Control Board (The Simulation Helper Tab) */}
-      <section className="bg-slate-900 text-slate-100 px-6 py-4.5 border-b border-slate-950 shadow-inner">
-        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-          <div className="flex-1 space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400 bg-slate-950 px-2 py-0.5 rounded-sm border border-slate-800">ENTORN SIMULAT DE ROLS</span>
-              <span className="text-[11px] text-slate-400 font-mono">Simulació de comportament de RLS i permisos de PostgreSQL</span>
-            </div>
-            <p className="text-slate-300 text-xs">
-              Mogueu-vos lliurement entre rols d'usuari per comprovar instantàniament com es filtren els camps del catàleg, s'oculten els productes no aprovats d'almacén i es bloquegen les comandes per excés de cupo.
-            </p>
-          </div>
-
-          {/* Role selector buttons grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 shrink-0">
-            {['Administrador', 'Administrativo', 'Personal de almacén', 'Coordinador de planta'].map((r) => (
-              <button
-                key={r}
-                type="button"
-                onClick={() => {
-                  setRolActual(r as Rol);
-                  setVistaActiva('stock');
-                }}
-                className={`px-3 py-2 text-xs font-semibold rounded-sm border text-center transition-all cursor-pointer flex flex-col justify-center items-center ${
-                  rolActual === r 
-                    ? 'bg-blue-600 text-white border-blue-500 shadow-sm' 
-                    : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-750'
-                }`}
-              >
-                <span>{r}</span>
-                <span className="text-[9px] text-slate-400 font-normal">
-                  {r === 'Administrador' ? 'Tomàs (Admin)' : r === 'Administrativo' ? 'Marta' : r === 'Personal de almacén' ? 'Joan' : 'Clara (P1)'}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Selected Role Dynamic context banner */}
-        <div className="max-w-7xl mx-auto mt-3 p-3 bg-slate-950/60 rounded-sm border border-slate-800/70 flex items-start gap-2.5 text-xs">
-          <Info className="h-4 w-4 text-blue-400 shrink-0 mt-0.5" />
-          <div>
-            <span className="font-semibold text-slate-200">
-              Actues com a dret de:{' '}
-              <span className={`px-2 py-0.5 rounded-sm text-[10px] font-bold ${getRoleBadgeColor(rolActual)}`}>
-                {rolActual}
-              </span>
-              {' '}— {usuarioActual.nombre} ({usuarioActual.email}) {usuarioActual.planta && `[Floor: ${usuarioActual.planta}]`} :
+      {/* RLS Informational Banner in production */}
+      <section className="bg-slate-900 text-slate-100 px-6 py-3 border-b border-slate-950 shadow-inner flex items-center justify-between">
+        <div className="max-w-7xl mx-auto w-full flex items-center justify-between text-xs gap-3">
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-blue-600 text-white uppercase">
+              {rolActual}
             </span>
-            <span className="text-slate-400 block mt-0.5">{getRoleDescription(rolActual)}</span>
+            <span className="text-slate-300">
+              Sessió activa com a <strong>{usuarioActual.nombre}</strong> ({usuarioActual.email}).
+            </span>
           </div>
+          <button 
+            onClick={handleLogout}
+            className="md:hidden flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 font-semibold cursor-pointer"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            Sortir
+          </button>
         </div>
       </section>
 
@@ -447,35 +512,34 @@ export default function App() {
               <History className="h-4 w-4" />
               <span>Logs / Auditories Internes</span>
             </button>
-          </div>
-
-          <div className="pt-4 border-t border-slate-200 space-y-1">
-            <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3">Arquitectura</span>
-
-            <button
-              onClick={() => setVistaActiva('docs')}
-              className={`flex items-center gap-3 w-full px-4 py-2.5 text-xs md:text-sm font-semibold rounded-sm text-left transition-all cursor-pointer border ${
-                vistaActiva === 'docs'
-                  ? 'bg-slate-800 text-white font-bold border-slate-700'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-transparent'
-              }`}
-            >
-              <Grid className="h-4 w-4 text-blue-500" />
-              <span>Documentació SQL-RLS</span>
-            </button>
-
             {rolActual === 'Administrador' && (
-              <button
-                onClick={() => setVistaActiva('admin-setup')}
-                className={`flex items-center gap-3 w-full px-4 py-2.5 text-xs md:text-sm font-semibold rounded-sm text-left transition-all cursor-pointer border ${
-                  vistaActiva === 'admin-setup'
-                    ? 'bg-purple-50 text-purple-700 font-bold border-purple-200'
-                    : 'text-purple-600 hover:text-purple-900 hover:bg-purple-50 border-transparent'
-                }`}
-              >
-                <Settings className="h-4 w-4 text-purple-600" />
-                <span>Configurar Rol Campos</span>
-              </button>
+              <div className="pt-4 border-t border-slate-200 space-y-1">
+                <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3">Configuració</span>
+
+                <button
+                  onClick={() => setVistaActiva('admin-setup')}
+                  className={`flex items-center gap-3 w-full px-4 py-2.5 text-xs md:text-sm font-semibold rounded-sm text-left transition-all cursor-pointer border ${
+                    vistaActiva === 'admin-setup'
+                      ? 'bg-purple-50 text-purple-700 font-bold border-purple-200'
+                      : 'text-purple-600 hover:text-purple-900 hover:bg-purple-50 border-transparent'
+                  }`}
+                >
+                  <Settings className="h-4 w-4 text-purple-600" />
+                  <span>Configurar Rol Camps</span>
+                </button>
+
+                <button
+                  onClick={() => setVistaActiva('usuarios')}
+                  className={`flex items-center gap-3 w-full px-4 py-2.5 text-xs md:text-sm font-semibold rounded-sm text-left transition-all cursor-pointer border ${
+                    vistaActiva === 'usuarios'
+                      ? 'bg-blue-50 text-blue-750 font-bold border-blue-200'
+                      : 'text-blue-600 hover:text-blue-900 hover:bg-blue-50 border-transparent'
+                  }`}
+                >
+                  <Users className="h-4 w-4 text-blue-600" />
+                  <span>Gestió d'Usuaris</span>
+                </button>
+              </div>
             )}
           </div>
 
@@ -513,7 +577,7 @@ export default function App() {
               productos={productos}
               limitesPlanta={limitesPlanta}
               rolActual={rolActual}
-              plantaAsignadaUsuario={usuarioActual.planta}
+              plantaAsignadaUsuario={usuarioActual.plantaAsignada}
               residenciaSeleccionadaId={residenciaSeleccionadaId}
               onUpdatePedidos={handleUpdatePedidos}
               onUpdateProductos={handleUpdateProductos}
@@ -554,8 +618,10 @@ export default function App() {
             />
           )}
 
-          {vistaActiva === 'docs' && (
-            <TechnicalDoc />
+
+
+          {vistaActiva === 'usuarios' && rolActual === 'Administrador' && (
+            <GestionUsuarios residencias={residencias} />
           )}
 
           {vistaActiva === 'admin-setup' && rolActual === 'Administrador' && (

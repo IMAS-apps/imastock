@@ -2,5 +2,5 @@
   "name": "IMAStock",
   "description": "Sistema de gestión de almacenes multi-centro para residencias públicas de personas mayores. Incluye modelado SQL, alertas de stock, uniformes y pedidos de planta.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": []
 }

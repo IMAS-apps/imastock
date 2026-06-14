@@ -7,7 +7,9 @@ import {
   EntradaStock, 
   AjusteStock, 
   UniformeEntrega, 
-  CampoVisibilidadConfig 
+  CampoVisibilidadConfig,
+  Perfil,
+  Rol
 } from './types';
 import { 
   INITIAL_RESIDENCIAS, 
@@ -395,3 +397,26 @@ export async function upsertVisibilidadConfig(role: string, config: CampoVisibil
   const { error } = await supabase.from('visibilidad_config').upsert(dbData);
   if (error) console.error('Error upserting visibilidad_config:', error);
 }
+
+export async function getPerfilById(id: string): Promise<Perfil | null> {
+  if (!isConfigured) return null;
+  const { data, error } = await supabase
+    .from('perfiles')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error) {
+    console.error('Error fetching perfil:', error);
+    return null;
+  }
+  return {
+    id: data.id,
+    email: data.email,
+    nombre: data.nombre,
+    rol: data.rol as Rol,
+    residenciaIds: data.residencia_ids || [],
+    plantaAsignada: data.planta_asignada || ''
+  };
+}
+
